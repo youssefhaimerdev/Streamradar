@@ -673,11 +673,16 @@ async function doSearch(override) {
   const rights = "UFC: Paramount+ and CBS only (ESPN+ lost rights Jan 2026, no PPV). NBA: NBC/Peacock/Amazon/ESPN (TNT lost rights 2025). NHL: ESPN/ABC/TNT/Max. NFL: Fox/CBS Sundays, NBC/Peacock Sunday Night, ESPN/ABC Monday Night, Amazon Thursday Night. MLB: Fox/ESPN/Apple TV+ Fridays/Peacock Sundays. NASCAR: Fox early season then NBC/Peacock/Amazon. Premier League: NBC/Peacock. Champions League: CBS/Paramount+. La Liga: ESPN+. F1: ESPN/ABC.";
 
   const prompt = "Where to watch: \"" + raw + "\"\n"
-    + "Today: " + ds + " at " + ts + "\n\n"
-    + "IMPORTANT - 2026 US streaming rights (override your training data): " + rights + "\n\n"
+    + "Today is: " + ds + " at " + ts + "\n\n"
+    + "2026 US streaming rights (override your training data): " + rights + "\n\n"
     + "Return ONLY valid JSON, no markdown:\n"
-    + '{"title":"full title","type":"sports|tv_show|movie|award_show|other","primaryOption":{"service":"SERVICE","detail":"app or channel","time":"ET time or Available Now","isLive":false,"isStreaming":true},"alternatives":[{"service":"Alt","detail":"how to access","time":"same"}],"affiliates":["Service1","Service2"],"note":"one sentence or empty","confidence":"high|medium|low"}\n\n'
-    + "Rules: use 2026 rights above — they override training data. For sports give ET start time + broadcast and streaming options. affiliates = up to 3 services to subscribe. confidence=high only if certain.";
+    + '{"title":"full official event title","type":"sports|tv_show|movie|award_show|other","eventDate":"the actual date this event occurs e.g. May 30 2026 — NOT today unless it is actually today","primaryOption":{"service":"Paramount+","detail":"Paramount+ streaming app — stream live at paramountplus.com or the app","time":"Prelims 4:00 AM ET / Main Card 7:00 AM ET — give real scheduled times, not a guess","isLive":false,"isStreaming":true},"alternatives":[{"service":"CBS","detail":"CBS broadcast channel — available via cable, antenna, or live TV apps","time":"select bouts only"}],"affiliates":["Paramount+","Hulu + Live TV"],"note":"one helpful sentence","confidence":"high|medium|low"}\n\n'
+    + "CRITICAL RULES:\n"
+    + "1. eventDate = the actual real-world date of this event, NOT today's date unless the event is literally today.\n"
+    + "2. isLive = true ONLY if the event is happening RIGHT NOW at " + ts + " today. If it is days away, isLive must be false.\n"
+    + "3. detail field must be descriptive — never just say 'app' or 'channel'. Say exactly what app or channel and how to find it.\n"
+    + "4. time field must show real scheduled start times in ET. For events in other time zones convert to ET correctly.\n"
+    + "5. Use 2026 rights above — they override your training data.";
 
   try {
     const txt = await askAI(prompt);
@@ -699,7 +704,7 @@ function renderResult(r, q) {
   const col=sc(po.service);
   const confCls=r.confidence==='high'?'chi':'cmd';
   const confLbl=r.confidence==='high'?'✓ CONFIRMED':'~ LIKELY — verify with your provider';
-  const now=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const now = r.eventDate || new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
   const tei={sports:'🏆',tv_show:'📺',movie:'🎬',award_show:'🏅'}[r.type]||'📡';
   const bc=po.isLive?'bl':po.isStreaming?'bs':'bt';
   const bt=po.isLive?'🔴 LIVE NOW':po.isStreaming?'📺 STREAMING':'📡 TV CHANNEL';
