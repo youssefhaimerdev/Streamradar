@@ -670,7 +670,29 @@ async function doSearch(override) {
   const ds=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const ts=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
 
-  const prompt=`Where to watch: "${raw}"\nToday: ${ds} at ${ts}\n\nReturn ONLY this JSON, no markdown, no extra text:\n{"title":"official full title","type":"sports|tv_show|movie|award_show|other","primaryOption":{"service":"ESPN+","detail":"ESPN+ app or ABC channel 7","time":"8:00 PM ET","isLive":false,"isStreaming":true},"alternatives":[{"service":"YouTube TV","detail":"includes ESPN+","time":"same"}],"affiliates":["ESPN+","Hulu + Live TV"],"note":"one helpful sentence or empty string","confidence":"high|medium|low"}\n\nRules: sports = include ET time + broadcast/streaming. TV = network + streaming home. affiliates = up to 3 services to subscribe. confidence=high only if certain.`;
+  const RIGHTS_2026 = `
+CRITICAL - CURRENT US STREAMING RIGHTS AS OF 2026 (these override your training data):
+- UFC: ALL events on Paramount+ and CBS only. ESPN+ lost UFC in Jan 2026. No pay-per-view anymore.
+- NBA: NBC, Peacock, Amazon Prime Video, and ESPN/ABC. TNT/TBS lost NBA after 2024-25 season.
+- NHL: ESPN, ABC, TNT, Max, Amazon Prime Video.
+- NFL: Fox/CBS (Sunday), NBC/Peacock (Sunday Night), ESPN/ABC (Monday Night), Amazon Prime (Thursday Night).
+- MLB: Fox, FS1, ESPN, Apple TV+ (Friday nights), Peacock (Sunday mornings).
+- NASCAR Cup: Fox (early season), NBC/Peacock/Amazon Prime Video (mid/late season).
+- Premier League: NBC, USA Network, Peacock.
+- Champions League: CBS, Paramount+, CBSSN.
+- La Liga: ESPN+.
+- Formula 1: ESPN, ESPN2, ABC.
+- College Football: Fox/CBS/NBC/ESPN/ABC depending on conference.`;
+
+  const prompt = \`Where to watch: "\${raw}"
+Today: \${ds} at \${ts}
+
+\${RIGHTS_2026}
+
+Return ONLY valid JSON, no markdown, no extra text:
+{"title":"official full title","type":"sports|tv_show|movie|award_show|other","primaryOption":{"service":"SERVICE NAME","detail":"exact app or channel name","time":"start time ET or Available Now","isLive":false,"isStreaming":true},"alternatives":[{"service":"Alt Service","detail":"how to access","time":"same or specific time"}],"affiliates":["Service1","Service2"],"note":"one helpful sentence or empty string","confidence":"high|medium|low"}
+
+Rules: Use the 2026 rights facts above — they override your training data. For sports include ET start time and both broadcast + streaming. For TV shows give the network and streaming home. affiliates = up to 3 services the user should subscribe to. confidence=high only when certain.\`;
 
   try {
     const txt = await askAI(prompt);
