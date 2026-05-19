@@ -670,29 +670,14 @@ async function doSearch(override) {
   const ds=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
   const ts=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
 
-  const RIGHTS_2026 = `
-CRITICAL - CURRENT US STREAMING RIGHTS AS OF 2026 (these override your training data):
-- UFC: ALL events on Paramount+ and CBS only. ESPN+ lost UFC in Jan 2026. No pay-per-view anymore.
-- NBA: NBC, Peacock, Amazon Prime Video, and ESPN/ABC. TNT/TBS lost NBA after 2024-25 season.
-- NHL: ESPN, ABC, TNT, Max, Amazon Prime Video.
-- NFL: Fox/CBS (Sunday), NBC/Peacock (Sunday Night), ESPN/ABC (Monday Night), Amazon Prime (Thursday Night).
-- MLB: Fox, FS1, ESPN, Apple TV+ (Friday nights), Peacock (Sunday mornings).
-- NASCAR Cup: Fox (early season), NBC/Peacock/Amazon Prime Video (mid/late season).
-- Premier League: NBC, USA Network, Peacock.
-- Champions League: CBS, Paramount+, CBSSN.
-- La Liga: ESPN+.
-- Formula 1: ESPN, ESPN2, ABC.
-- College Football: Fox/CBS/NBC/ESPN/ABC depending on conference.`;
+  const rights = "UFC: Paramount+ and CBS only (ESPN+ lost rights Jan 2026, no PPV). NBA: NBC/Peacock/Amazon/ESPN (TNT lost rights 2025). NHL: ESPN/ABC/TNT/Max. NFL: Fox/CBS Sundays, NBC/Peacock Sunday Night, ESPN/ABC Monday Night, Amazon Thursday Night. MLB: Fox/ESPN/Apple TV+ Fridays/Peacock Sundays. NASCAR: Fox early season then NBC/Peacock/Amazon. Premier League: NBC/Peacock. Champions League: CBS/Paramount+. La Liga: ESPN+. F1: ESPN/ABC.";
 
-  const prompt = \`Where to watch: "\${raw}"
-Today: \${ds} at \${ts}
-
-\${RIGHTS_2026}
-
-Return ONLY valid JSON, no markdown, no extra text:
-{"title":"official full title","type":"sports|tv_show|movie|award_show|other","primaryOption":{"service":"SERVICE NAME","detail":"exact app or channel name","time":"start time ET or Available Now","isLive":false,"isStreaming":true},"alternatives":[{"service":"Alt Service","detail":"how to access","time":"same or specific time"}],"affiliates":["Service1","Service2"],"note":"one helpful sentence or empty string","confidence":"high|medium|low"}
-
-Rules: Use the 2026 rights facts above — they override your training data. For sports include ET start time and both broadcast + streaming. For TV shows give the network and streaming home. affiliates = up to 3 services the user should subscribe to. confidence=high only when certain.\`;
+  const prompt = "Where to watch: \"" + raw + "\"\n"
+    + "Today: " + ds + " at " + ts + "\n\n"
+    + "IMPORTANT - 2026 US streaming rights (override your training data): " + rights + "\n\n"
+    + "Return ONLY valid JSON, no markdown:\n"
+    + '{"title":"full title","type":"sports|tv_show|movie|award_show|other","primaryOption":{"service":"SERVICE","detail":"app or channel","time":"ET time or Available Now","isLive":false,"isStreaming":true},"alternatives":[{"service":"Alt","detail":"how to access","time":"same"}],"affiliates":["Service1","Service2"],"note":"one sentence or empty","confidence":"high|medium|low"}\n\n'
+    + "Rules: use 2026 rights above — they override training data. For sports give ET start time + broadcast and streaming options. affiliates = up to 3 services to subscribe. confidence=high only if certain.";
 
   try {
     const txt = await askAI(prompt);
