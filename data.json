@@ -1,0 +1,111 @@
+{
+  "updated": "2026-05-19",
+  "note": "Update this file every Monday. Add upcoming week's events. The site checks this first before using AI.",
+  "events": [
+    {
+      "title": "UFC Fight Night: Song vs. Figueiredo",
+      "keywords": ["ufc", "song", "figueiredo", "ufc macau", "ufc fight night", "song figueiredo", "ufc 277"],
+      "type": "sports",
+      "date": "Saturday, May 30, 2026",
+      "primaryService": "Paramount+",
+      "primaryDetail": "Paramount+ streaming app — stream at paramountplus.com or the Paramount+ app",
+      "time": "Prelims 4:00 AM ET / Main Card 7:00 AM ET",
+      "isLive": false,
+      "isStreaming": true,
+      "alternatives": [
+        { "service": "CBS", "detail": "Select bouts simulcast live on CBS", "time": "Check CBS schedule" }
+      ],
+      "affiliates": ["Paramount+", "Hulu + Live TV"],
+      "note": "Fight takes place at Galaxy Arena in Macau, China. Early morning US start times due to time zone.",
+      "confidence": "high"
+    },
+    {
+      "title": "UFC 329: McGregor vs. Holloway 2",
+      "keywords": ["ufc 329", "mcgregor", "holloway", "conor mcgregor", "max holloway", "ufc 329"],
+      "type": "sports",
+      "date": "TBA 2026",
+      "primaryService": "Paramount+",
+      "primaryDetail": "Paramount+ streaming app — stream at paramountplus.com or the Paramount+ app",
+      "time": "TBA — check Paramount+ for exact time",
+      "isLive": false,
+      "isStreaming": true,
+      "alternatives": [
+        { "service": "CBS", "detail": "May simulcast on CBS — check local listings", "time": "TBA" }
+      ],
+      "affiliates": ["Paramount+", "Hulu + Live TV"],
+      "note": "All UFC events in 2026 are exclusively on Paramount+ — no pay-per-view, no ESPN+.",
+      "confidence": "high"
+    },
+    {
+      "title": "UFC Freedom 250: Topuria vs. Gaethje",
+      "keywords": ["ufc freedom", "topuria", "gaethje", "ufc white house", "white house ufc", "ilia topuria", "justin gaethje"],
+      "type": "sports",
+      "date": "Sunday, June 14, 2026",
+      "primaryService": "CBS",
+      "primaryDetail": "CBS — broadcast live on CBS (free with antenna or cable). Also streaming on Paramount+",
+      "time": "TBA ET",
+      "isLive": false,
+      "isStreaming": false,
+      "alternatives": [
+        { "service": "Paramount+", "detail": "Stream live on Paramount+ app", "time": "same" }
+      ],
+      "affiliates": ["Paramount+", "Hulu + Live TV"],
+      "note": "Historic event held at the White House grounds. One of 4 big UFC events airing live on CBS in 2026.",
+      "confidence": "high"
+    },
+    {
+      "title": "NBA Playoffs 2026",
+      "keywords": ["nba playoffs", "nba finals", "basketball playoffs", "nba postseason"],
+      "type": "sports",
+      "date": "Ongoing — through June 2026",
+      "primaryService": "NBC",
+      "primaryDetail": "NBC broadcast channel — free with antenna, cable, or live TV apps",
+      "time": "Varies by game — check NBC or Peacock for schedule",
+      "isLive": false,
+      "isStreaming": false,
+      "alternatives": [
+        { "service": "Peacock", "detail": "Stream all NBA Playoff games on Peacock", "time": "same" },
+        { "service": "Amazon Prime Video", "detail": "Select games on Prime Video", "time": "varies" }
+      ],
+      "affiliates": ["Peacock", "Hulu + Live TV", "YouTube TV"],
+      "note": "NBA moved from ESPN/TNT to NBC, Peacock, and Amazon Prime Video starting with the 2025-26 season.",
+      "confidence": "high"
+    },
+    {
+      "title": "NHL Stanley Cup Playoffs 2026",
+      "keywords": ["nhl playoffs", "stanley cup", "nhl postseason", "stanley cup finals", "hockey playoffs"],
+      "type": "sports",
+      "date": "Ongoing — through June 2026",
+      "primaryService": "ESPN",
+      "primaryDetail": "ESPN — check ESPN app or espn.com for game schedule",
+      "time": "Varies by game",
+      "isLive": false,
+      "isStreaming": false,
+      "alternatives": [
+        { "service": "ABC", "detail": "Select games broadcast on ABC", "time": "varies" },
+        { "service": "Max", "detail": "Stream on Max (HBO/Warner streaming app)", "time": "same" },
+        { "service": "TNT", "detail": "Select games on TNT", "time": "varies" }
+      ],
+      "affiliates": ["Hulu + Live TV", "YouTube TV", "ESPN+"],
+      "note": "NHL Playoffs air across ESPN, ABC, TNT, and Max. Check ESPN+ for streaming access.",
+      "confidence": "high"
+    },
+    {
+      "title": "Formula 1 Monaco Grand Prix 2026",
+      "keywords": ["monaco grand prix", "f1 monaco", "formula 1 monaco", "monaco gp", "formula one monaco"],
+      "type": "sports",
+      "date": "May 22–25, 2026",
+      "primaryService": "ESPN",
+      "primaryDetail": "ESPN — live race coverage on ESPN and ESPN2",
+      "time": "Race: Sunday May 25, ~9:00 AM ET",
+      "isLive": false,
+      "isStreaming": false,
+      "alternatives": [
+        { "service": "ABC", "detail": "Race may simulcast on ABC — check local listings", "time": "same" }
+      ],
+      "affiliates": ["Hulu + Live TV", "YouTube TV"],
+      "note": "Practice and qualifying also on ESPN2. F1 is exclusively on ESPN/ABC in the US.",
+      "confidence": "high"
+    }
+  ]
+}

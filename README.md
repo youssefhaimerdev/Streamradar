@@ -1,197 +1,125 @@
 # StreamRadar 📡
 **Find what channel or streaming service any game or show is on tonight.**
-Zero backend. Zero cost. Fully standalone HTML.
 
 ---
 
-## 🔑 Step 1 — Get Your Free API Keys (10 min total)
+## 🔑 Step 1 — Get 3 New Free API Keys
 
-You need at least ONE key. Get all three for maximum reliability.
-The site automatically tries each one and falls back if rate-limited.
+Your old keys were exposed and will be revoked. Get fresh ones here:
 
-### 1. Google Gemini — PRIMARY (best free option)
-- Go to: **https://aistudio.google.com**
-- Sign in with Google → click **"Get API Key"** → **"Create API key"**
-- Free limits: **1,500 searches/day · 15/minute** — plenty for a new site
-- Copy the key (starts with `AIza...`)
-
-### 2. OpenRouter — FALLBACK (free models, no credit card)
-- Go to: **https://openrouter.ai**
-- Sign up → **Keys** → **Create Key**
-- Free limits: Unlimited on free models (llama-3.3-70b is free forever)
-- Copy the key (starts with `sk-or-...`)
-
-### 3. Groq — SECOND FALLBACK (blazing fast)
-- Go to: **https://console.groq.com**
-- Sign up → **API Keys** → **Create API Key**
-- Free limits: 14,400 requests/day on free tier
-- Copy the key (starts with `gsk_...`)
+| Provider | URL | Free Limit |
+|---|---|---|
+| **Gemini** | aistudio.google.com → Get API Key | 1,500/day |
+| **OpenRouter** | openrouter.ai → Keys → Create Key | Unlimited (free models) |
+| **Groq** | console.groq.com → API Keys → Create | 14,400/day |
 
 ---
 
-## 🔧 Step 2 — Add Keys to the Site
+## 🔒 Step 2 — Add Keys to Vercel (NOT to any file)
 
-Open `index.html` and find this block near the bottom (search for `KEYS`):
+Keys now live **only** in Vercel's environment variables — they never appear in your code.
 
-```javascript
-const KEYS = {
-  gemini:     'YOUR_GEMINI_KEY_HERE',
-  openrouter: 'YOUR_OPENROUTER_KEY_HERE',
-  groq:       'YOUR_GROQ_KEY_HERE',
-};
-```
+1. Go to **vercel.com** → your StreamRadar project
+2. **Settings → Environment Variables**
+3. Add these three:
 
-Replace each placeholder with your real key. Example:
-```javascript
-const KEYS = {
-  gemini:     'AIzaSyAbc123...',
-  openrouter: 'sk-or-v1-abc123...',
-  groq:       'gsk_abc123...',
-};
-```
+| Name | Value |
+|---|---|
+| `GEMINI_API_KEY` | your new Gemini key |
+| `OPENROUTER_API_KEY` | your new OpenRouter key |
+| `GROQ_API_KEY` | your new Groq key |
 
-Save the file. Done. The site now works.
+4. Click **Save** → then **Redeploy** (Deployments tab → the three dots → Redeploy)
+
+Done. Keys are safe. GitHub will never flag them again.
 
 ---
 
-## 🚀 Step 3 — Deploy to Vercel
+## 🚀 Deploy / Redeploy
 
-### Option A: Drag & Drop (fastest)
-1. Go to **vercel.com** → sign up free
-2. Click **"Add New Project"** → **"Upload"**
-3. Drag the `streamradar` folder onto the page
-4. Click **Deploy** — live in ~30 seconds
+### First time:
+1. Push this folder to a GitHub repo
+2. Vercel → Add New Project → Import from GitHub → Deploy
+3. Add env vars as above → Redeploy
 
-### Option B: GitHub (recommended for updates)
+### After any file update:
 ```bash
-cd streamradar
-git init && git add . && git commit -m "StreamRadar launch"
-gh repo create streamradar --public --push
+git add . && git commit -m "update" && git push
 ```
-Then: Vercel → **Add New Project** → Import from GitHub → Deploy.
-Every future `git push` auto-redeploys the site.
+Vercel auto-redeploys in ~20 seconds.
 
 ---
 
-## 📅 Weekly Updates (Hot Tonight section)
-
-Open `index.html`, find the `HOT` array (search for `HOT TONIGHT`):
-
-```javascript
-const HOT = [
-  { name:'NBA Playoffs', sub:'Eastern Conference Finals', svc:'ESPN', time:'8:30 PM ET', color:'#FF4500', emoji:'🏀', badge:'LIVE' },
-  ...
-];
-```
-
-Edit the events to match what's actually on this week. Push to GitHub → auto-deploys.
-Takes 2 minutes. Do it every Monday.
-
----
-
-## 💰 Affiliate Links
-
-Find the `AFFS` array in `index.html`. Replace each `href` with your real affiliate URL:
-
-```javascript
-{ name:'ESPN+', href:'https://espnplus.com/?ref=YOUR_ID', ... },
-{ name:'Hulu + Live TV', href:'https://hulu.com/?ref=YOUR_ID', ... },
-```
-
-Sign up for affiliate programs:
-- **ESPN+**: DigiMedia / Impact (search "ESPN+ affiliate program")
-- **Hulu**: Commission Junction (CJ.com)
-- **YouTube TV**: Google Affiliate Network
-- **Peacock**: Impact or FlexOffers
-- **Paramount+**: Commission Junction
-
----
-
-## 📢 Replace Ad Placeholders with Real AdSense
-
-Find elements with class `adslot` in `index.html`:
-```html
-<div class="adslot ad728">Advertisement · 728×90</div>
-```
-
-Replace with your AdSense `<ins>` tag:
-```html
-<ins class="adsbygoogle"
-     style="display:block"
-     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-     data-ad-slot="XXXXXXXXXX"
-     data-ad-format="auto"
-     data-full-width-responsive="true"></ins>
-<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-```
-
-There are 3 ad slots: below hero, in-feed (after results), bottom of page.
-
----
-
-## 📊 Enable Google Analytics
-
-In `index.html` find `G-XXXXXXXXXX` (appears twice) and replace with your real Measurement ID.
-
-## 🔍 Enable Google Search Console
-
-Find `YOUR_GSC_CODE_HERE` in the `<head>` and replace with your verification code.
-
----
-
-## 📁 File Structure (3 files total — that's it)
+## 📁 File Structure
 
 ```
 streamradar/
-├── index.html     ← Entire site: HTML + CSS + JS + data
-├── vercel.json    ← Routing config (set once, never touch)
-└── README.md      ← This file
+├── index.html       ← Entire site — HTML, CSS, all JS logic
+├── api/
+│   └── search.js    ← Serverless function — holds AI keys securely
+├── data.json        ← Curated events (optional, update weekly)
+├── vercel.json      ← Routing + function config
+├── package.json     ← ESM declaration
+└── README.md        ← This file
 ```
 
-**No backend. No Node.js. No build step. No package.json.**
-100% static. Works on any host that serves HTML.
+---
+
+## 🔄 How Search Works Now
+
+```
+User types query
+      ↓
+Browser fetches 3 free public APIs in parallel:
+  • ESPN   → real sports schedules + broadcast info (no key needed)
+  • TheSportsDB → future event search (no key needed)
+  • TVMaze → TV show network + episode schedule (no key needed)
+      ↓
+Real data sent to /api/search (your Vercel function)
+      ↓
+Vercel function uses env var keys to call Gemini → OpenRouter → Groq
+(first one that works wins, auto-fallback)
+      ↓
+Formatted result returned to browser
+```
+
+Public API calls (ESPN, TVMaze, TheSportsDB) happen in the browser — no keys needed.
+AI calls happen server-side — keys never exposed.
 
 ---
 
-## 🎯 Update Workflow
+## 📅 Update Hot Tonight Events (weekly)
 
-| What changed | What to edit | Time |
-|---|---|---|
-| Hot Tonight events | `HOT` array in index.html | 2 min |
-| Streaming prices | `AFFS` array in index.html | 2 min |
-| Trending pills | `tpill` buttons in HTML | 1 min |
-| Design/copy | CSS/HTML in index.html | varies |
-| API prompt tuning | `prompt` variable in `doSearch()` | varies |
+Open `data.json`, edit the events array, push to GitHub. Takes 2 minutes.
 
-Push to GitHub → Vercel redeploys in ~20 seconds.
+## 💰 Update Affiliate Links
 
----
+Open `index.html`, find the `AFFS` array, replace each `href` with your affiliate URL.
 
-## 🆓 Free Tier Limits (combined)
+## 📢 Add Google AdSense
 
-| Provider | Free Searches/Day | Per Minute |
-|---|---|---|
-| Gemini (Google) | 1,500 | 15 |
-| OpenRouter | Unlimited* | ~20 |
-| Groq | 14,400 | 30 |
-| **Total** | **~16,000+/day** | — |
+Find `<div class="adslot ad728">` (3 of them) and replace with your `<ins>` AdSense tags.
 
-*OpenRouter free models have no daily cap but may queue under heavy load.
+## 📊 Enable Analytics
 
-For a new site this is massively more than enough. Upgrade only if you're getting real traffic.
+In `index.html` find `G-XXXXXXXXXX` (twice) and replace with your real GA Measurement ID.
+
+## 🔍 Enable Google Search Console
+
+In `index.html` find `YOUR_GSC_CODE_HERE` and replace with your verification code.
 
 ---
 
 ## 🛠 Local Testing
 
-No server needed. Just open `index.html` directly in your browser:
-```bash
-open index.html   # Mac
-start index.html  # Windows
-```
-
-Or use the Vercel CLI for a production-identical preview:
 ```bash
 npm i -g vercel
-vercel dev        # runs at localhost:3000
+vercel dev
+```
+
+Then add a `.env.local` file (never commit this):
+```
+GEMINI_API_KEY=AIza...
+OPENROUTER_API_KEY=sk-or-v1-...
+GROQ_API_KEY=gsk_...
 ```

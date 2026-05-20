@@ -498,21 +498,7 @@ h2.stitle{font-family:'Bebas Neue',sans-serif;font-size:2.6rem;letter-spacing:.0
 <script>
 'use strict';
 
-/* ╔══════════════════════════════════════════════════════╗
-   ║  FREE API KEYS — GET YOURS IN ~2 MINUTES EACH       ║
-   ║                                                      ║
-   ║  GEMINI  → aistudio.google.com  (1,500/day free)    ║
-   ║  OPENROUTER → openrouter.ai     (free models)        ║
-   ║  GROQ    → console.groq.com     (generous free tier) ║
-   ║                                                      ║
-   ║  All three work directly from the browser.          ║
-   ║  Site auto-falls back if one hits a rate limit.     ║
-   ╚══════════════════════════════════════════════════════╝ */
-const KEYS = {
-  gemini:     'AIzaSyCmDEKkhLFj1zTIyH9L1TmIiSZYR970SlY',
-  openrouter: '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',
-  groq:       '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',
-};
+
 
 /* ╔══════════════════════════════════════════════════════╗
    ║  HOT TONIGHT — UPDATE WEEKLY                        ║
@@ -545,186 +531,274 @@ const AFFS = [
 const SC_MAP = {espn:'#FF4500',netflix:'#E50914',hulu:'#1CE783',max:'#A020F0',hbo:'#A020F0',amazon:'#00A8E1',prime:'#00A8E1',apple:'#CCCCCC',paramount:'#0064FF',peacock:'#FFB700',disney:'#113CCF',abc:'#009ADE',nbc:'#F7C300',cbs:'#0039A6',fox:'#FF6600',tnt:'#E40000',tbs:'#0080FF',youtube:'#FF0000',sling:'#1F9BD9',fubo:'#F06220',usa:'#0099FF',amc:'#44BB44',fx:'#334499'};
 const sc = s => { const l=(s||'').toLowerCase(); return (Object.entries(SC_MAP).find(([k])=>l.includes(k))||[])[1]||'#445577'; };
 
-/* ── API CALLERS ──────────────────────────────────────── */
-async function callGemini(p) {
-  if (!KEYS.gemini||KEYS.gemini.includes('YOUR_')) throw new Error('no key');
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEYS.gemini}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:p}]}],generationConfig:{temperature:.1,maxOutputTokens:1024}})});
-  if (!r.ok) throw new Error(r.status);
-  const d = await r.json();
-  return d.candidates[0].content.parts[0].text;
-}
-async function callOR(p) {
-  if (!KEYS.openrouter||KEYS.openrouter.includes('YOUR_')) throw new Error('no key');
-  const r = await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${KEYS.openrouter}`,'HTTP-Referer':'https://streamradar.app','X-Title':'StreamRadar'},body:JSON.stringify({model:'meta-llama/llama-3.3-70b-instruct:free',messages:[{role:'user',content:p}],max_tokens:1024})});
-  if (!r.ok) throw new Error(r.status);
-  const d = await r.json();
-  return d.choices[0].message.content;
-}
-async function callGroq(p) {
-  if (!KEYS.groq||KEYS.groq.includes('YOUR_')) throw new Error('no key');
-  const r = await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${KEYS.groq}`},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'user',content:p}],max_tokens:1024,temperature:.1})});
-  if (!r.ok) throw new Error(r.status);
-  const d = await r.json();
-  return d.choices[0].message.content;
-}
+/* ═══════════════════════════════════════════════════════════
+   SCHEDULE APIs — free, no key, CORS supported in browser
+   ═══════════════════════════════════════════════════════════
 
-async function askAI(prompt) {
-  for (const [name, fn] of [['Gemini',callGemini],['OpenRouter',callOR],['Groq',callGroq]]) {
-    try { const t=await fn(prompt); console.log(`[SR] via ${name}`); return t; }
-    catch(e){ console.warn(`[SR] ${name} failed:`,e.message); }
+   1. ESPN (unofficial) — sports schedules with broadcast info
+   2. TheSportsDB       — sports event search (future events)
+   3. TVMaze            — TV show schedules and network info
+   4. AI (Gemini/OpenRouter/Groq) — fallback + final formatting
+
+   Flow: fetch real data from APIs → feed to AI → render result
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── SPORT DETECTION ─────────────────────────────────────── */
+const SPORT_KEYS = {
+  ufc: ['ufc','mma','fight night','bellator','octagon'],
+  nfl: ['nfl','super bowl','patriots','cowboys','chiefs','eagles','packers','49ers','ravens','bills'],
+  nba: ['nba','lakers','celtics','warriors','knicks','heat','bulls','bucks','suns','clippers','nets','nuggets'],
+  nhl: ['nhl','hockey','stanley cup','bruins','rangers','blackhawks','maple leafs','oilers','avalanche','lightning','capitals'],
+  mlb: ['mlb','baseball','yankees','dodgers','cubs','mets','red sox','braves','astros','world series'],
+  mls: ['mls','inter miami','la galaxy','sounders','portland timbers','atlanta united'],
+  epl: ['premier league','epl','arsenal','chelsea','liverpool','manchester city','man city','manchester united','man utd','tottenham','spurs','newcastle','aston villa'],
+  ucl: ['champions league','uefa champions','ucl'],
+  f1:  ['formula 1','formula one','f1','grand prix',' gp '],
+  golf:['masters','pga tour','us open golf','the open championship','ryder cup','liv golf'],
+  tennis:['wimbledon','us open tennis','french open','australian open','atp','wta'],
+};
+
+const ESPN_CFG = {
+  ufc:  {s:'mma',        l:'ufc'},
+  nfl:  {s:'football',   l:'nfl'},
+  nba:  {s:'basketball', l:'nba'},
+  nhl:  {s:'hockey',     l:'nhl'},
+  mlb:  {s:'baseball',   l:'mlb'},
+  mls:  {s:'soccer',     l:'usa.1'},
+  epl:  {s:'soccer',     l:'eng.1'},
+  ucl:  {s:'soccer',     l:'uefa.champions'},
+  f1:   {s:'racing',     l:'f1'},
+};
+
+function detectSport(q) {
+  const ql = q.toLowerCase();
+  for (const [sport, keys] of Object.entries(SPORT_KEYS)) {
+    if (keys.some(k => ql.includes(k))) return sport;
   }
-  throw new Error('All providers failed. Check that at least one API key is configured.');
+  return null;
 }
 
-/* ── RECENT SEARCHES ──────────────────────────────────── */
-const getRecent = () => { try{return JSON.parse(localStorage.getItem('sr_r')||'[]')}catch{return[]} };
-function addRecent(q) {
+/* ── FREE API FETCHERS ───────────────────────────────────── */
+
+// ESPN unofficial API — current + upcoming games with broadcast info
+async function fetchESPN(sport) {
+  const cfg = ESPN_CFG[sport];
+  if (!cfg) return null;
   try {
-    let r=getRecent().filter(x=>x.toLowerCase()!==q.toLowerCase());
-    r.unshift(q); r=r.slice(0,6);
-    localStorage.setItem('sr_r',JSON.stringify(r)); renderRecent();
-  } catch{}
-}
-function renderRecent() {
-  const r=getRecent(),el=document.getElementById('recent');
-  if(!r.length){el.style.display='none';return;}
-  el.style.display='block';
-  document.getElementById('rchips').innerHTML=r.map(q=>`<button class="rcpill" onclick="qs(${JSON.stringify(q)})">🕐 ${q}</button>`).join('');
-}
-
-/* ── COUNTER ──────────────────────────────────────────── */
-function initCounter() {
-  const base=parseInt(sessionStorage.getItem('sr_b')||'0')||8200+Math.floor(Math.random()*900);
-  sessionStorage.setItem('sr_b',base);
-  const mins=new Date().getHours()*60+new Date().getMinutes();
-  document.getElementById('ctr').textContent=(base+Math.floor(mins*2.6)).toLocaleString();
-}
-function bumpCounter() {
-  const el=document.getElementById('ctr');
-  el.textContent=(parseInt(el.textContent.replace(/,/g,''))+1).toLocaleString();
-}
-
-/* ── CLOCK ────────────────────────────────────────────── */
-function tick() {
-  const n=new Date();
-  const t=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
-  const d=n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-  document.getElementById('clock').textContent=`LIVE · ${d} · ${t}`;
-}
-setInterval(tick,1000);tick();
-
-/* ── RENDER HOT TONIGHT ───────────────────────────────── */
-function renderHot() {
-  document.getElementById('hgrid').innerHTML=HOT.map(h=>`
-    <div class="hcard" style="border-top-color:${h.color}"
-      onclick="qs(${JSON.stringify(h.name)})"
-      onmouseenter="this.style.boxShadow='0 14px 40px ${h.color}28'"
-      onmouseleave="this.style.boxShadow='none'">
-      <div class="hcard-top">
-        <span class="hemoji">${h.emoji}</span>
-        <span class="hbadge" style="background:${h.color}28;color:${h.color}">${h.badge}</span>
-      </div>
-      <div class="hname">${h.name}</div>
-      <div class="hsub">${h.sub}</div>
-      <div class="hfoot">
-        <span class="hsvc" style="color:${sc(h.svc)||h.color}">${h.svc}</span>
-        <span class="htime">${h.time}</span>
-      </div>
-    </div>`).join('');
+    const res = await fetch(
+      `https://site.api.espn.com/apis/site/v2/sports/${cfg.s}/${cfg.l}/scoreboard`,
+      {headers: {'Accept':'application/json'}}
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const events = (data.events || []).map(ev => {
+      const comp = ev.competitions?.[0] || {};
+      const broadcasts = comp.broadcasts?.flatMap(b => b.names || []) || [];
+      const competitors = comp.competitors?.map(c => c.team?.displayName || c.athlete?.displayName).filter(Boolean) || [];
+      return {
+        name:        ev.name,
+        shortName:   ev.shortName,
+        date:        ev.date ? new Date(ev.date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}) : null,
+        time:        ev.date ? new Date(ev.date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'}) : null,
+        status:      ev.status?.type?.description,
+        broadcasts,
+        competitors,
+        venue:       comp.venue?.fullName,
+      };
+    });
+    return events.length ? events : null;
+  } catch(e) {
+    console.warn('[SR] ESPN failed:', e.message);
+    return null;
+  }
 }
 
-/* ── RENDER AFFILIATES ────────────────────────────────── */
-function renderAffs() {
-  document.getElementById('aff-grid').innerHTML=AFFS.map(a=>`
-    <a class="ac" href="${a.href}" target="_blank" rel="noopener sponsored"
-      style="border-top-color:${a.color}"
-      onmouseenter="this.style.boxShadow='0 16px 50px ${a.color}28'"
-      onmouseleave="this.style.boxShadow='none'">
-      <div class="ach2">
-        <span class="aei">${a.icon}</span>
-        ${a.badge?`<span class="abadge" style="background:${a.color}28;color:${a.color}">${a.badge}</span>`:''}
-      </div>
-      <div class="an" style="color:${a.color}">${a.name}</div>
-      <div class="at2">${a.tag}</div>
-      <p class="ad2">${a.desc}</p>
-      <div class="af2">
-        <span class="apr">${a.price}</span>
-        <span class="acta" style="color:${a.color}">Try Free →</span>
-      </div>
-    </a>`).join('');
+// TheSportsDB — event search, great for future events by name
+async function fetchSportsDB(query) {
+  try {
+    const res = await fetch(
+      `https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=${encodeURIComponent(query)}`,
+      {headers: {'Accept':'application/json'}}
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const events = (data.event || []).slice(0, 4).map(ev => ({
+      name:    ev.strEvent,
+      date:    ev.dateEvent,
+      time:    ev.strTime || 'TBD',
+      sport:   ev.strSport,
+      league:  ev.strLeague,
+      channel: ev.strChannel || null,
+      venue:   ev.strVenue,
+      country: ev.strCountry,
+    }));
+    return events.length ? events : null;
+  } catch(e) {
+    console.warn('[SR] TheSportsDB failed:', e.message);
+    return null;
+  }
 }
 
-/* ── SEARCH ───────────────────────────────────────────── */
-const rz=document.getElementById('rz'),inf=document.getElementById('infeed');
-function focusSearch(){document.getElementById('si').focus();window.scrollTo({top:0,behavior:'smooth'});}
-function qs(q){document.getElementById('si').value=q;doSearch(q);}
+// TVMaze — TV show search with network + upcoming episodes
+async function fetchTVMaze(query) {
+  try {
+    const res = await fetch(
+      `https://api.tvmaze.com/search/shows?q=${encodeURIComponent(query)}`,
+      {headers: {'Accept':'application/json'}}
+    );
+    if (!res.ok) return null;
+    const results = await res.json();
+    if (!results.length) return null;
+
+    const show = results[0].show;
+    const network = show.network?.name || show.webChannel?.name || null;
+    const today   = new Date().toISOString();
+
+    // Also fetch upcoming episodes
+    let upcoming = [];
+    try {
+      const epRes = await fetch(`https://api.tvmaze.com/shows/${show.id}/episodes`);
+      if (epRes.ok) {
+        const eps = await epRes.json();
+        upcoming = eps
+          .filter(ep => ep.airstamp && ep.airstamp >= today)
+          .slice(0, 3)
+          .map(ep => ({
+            label:   `S${String(ep.season).padStart(2,'0')}E${String(ep.number).padStart(2,'0')} — ${ep.name}`,
+            airdate: ep.airdate,
+            airtime: ep.airtime,
+          }));
+      }
+    } catch {}
+
+    return { title:show.name, network, status:show.status, upcoming };
+  } catch(e) {
+    console.warn('[SR] TVMaze failed:', e.message);
+    return null;
+  }
+}
+
+// TVMaze today's full schedule — used as supplemental context
+async function fetchTVTonight() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const res = await fetch(`https://api.tvmaze.com/schedule?country=US&date=${today}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.slice(0, 60).map(item => ({
+      show:    item.show?.name,
+      episode: item.name,
+      network: item.show?.network?.name || item.show?.webChannel?.name,
+      time:    item.airtime,
+    }));
+  } catch { return null; }
+}
+
+/* ── AI via /api/search (keys stay safe in Vercel env vars) ─ */
+async function askAI(prompt) {
+  const res = await fetch('/api/search', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ prompt }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Server error ${res.status}`);
+  }
+  const data = await res.json();
+  if (!data.text) throw new Error('Empty response from server');
+  return data.text;
+}
+
+/* ── STREAMING RIGHTS 2026 (AI fallback context) ─────────── */
+const RIGHTS_2026 = "UFC: Paramount+ and CBS (ESPN+ lost rights Jan 2026, no PPV). NBA: NBC/Peacock/Amazon Prime/ESPN (TNT lost rights 2025). NHL: ESPN/ABC/TNT/Max. NFL: Fox/CBS Sundays, NBC/Peacock Sunday Night, ESPN/ABC Monday Night, Amazon Prime Thursday Night. MLB: Fox/ESPN/Apple TV+ Fridays/Peacock Sundays. NASCAR: Fox then NBC/Peacock/Amazon mid-season. Premier League: NBC/Peacock. Champions League: CBS/Paramount+. La Liga: ESPN+. F1: ESPN/ABC. College Football: Fox/CBS/NBC/ESPN by conference.";
+
+/* ── MAIN SEARCH ─────────────────────────────────────────── */
+const rz  = document.getElementById('rz');
+const inf = document.getElementById('infeed');
+
+function focusSearch(){ document.getElementById('si').focus(); window.scrollTo({top:0,behavior:'smooth'}); }
+function qs(q){ document.getElementById('si').value=q; doSearch(q); }
 
 async function doSearch(override) {
-  const raw=(override||document.getElementById('si').value||'').trim();
-  if(!raw){document.getElementById('si').focus();return;}
-  rz.style.display='block';inf.style.display='none';
-  rz.innerHTML=`<div class="loading-card"><div class="scanbar"></div><span style="font-size:2.3rem;display:block;margin-bottom:18px">📡</span><p style="color:var(--cyan);font-weight:700;font-size:1rem;margin-bottom:7px">Scanning 200+ channels &amp; streaming services…</p><p style="color:var(--dim);font-size:.83rem">Usually about 2 seconds</p></div>`;
+  const raw = (override || document.getElementById('si').value || '').trim();
+  if (!raw) { document.getElementById('si').focus(); return; }
+
+  rz.style.display = 'block';
+  inf.style.display = 'none';
+  rz.innerHTML = `
+    <div class="loading-card">
+      <div class="scanbar"></div>
+      <span style="font-size:2.3rem;display:block;margin-bottom:18px">📡</span>
+      <p style="color:var(--cyan);font-weight:700;font-size:1rem;margin-bottom:7px">Scanning live schedule databases…</p>
+      <p style="color:var(--dim);font-size:.83rem">Checking ESPN, TVMaze & TheSportsDB in real time</p>
+    </div>`;
   rz.scrollIntoView({behavior:'smooth',block:'nearest'});
 
-  const n=new Date();
-  const ds=n.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  const ts=n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
+  const now    = new Date();
+  const ds     = now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  const ts     = now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
+  const sport  = detectSport(raw);
 
-  const rights = "UFC: Paramount+ and CBS only (ESPN+ lost rights Jan 2026, no PPV). NBA: NBC/Peacock/Amazon/ESPN (TNT lost rights 2025). NHL: ESPN/ABC/TNT/Max. NFL: Fox/CBS Sundays, NBC/Peacock Sunday Night, ESPN/ABC Monday Night, Amazon Thursday Night. MLB: Fox/ESPN/Apple TV+ Fridays/Peacock Sundays. NASCAR: Fox early season then NBC/Peacock/Amazon. Premier League: NBC/Peacock. Champions League: CBS/Paramount+. La Liga: ESPN+. F1: ESPN/ABC.";
+  // ── Fetch from all relevant free APIs in parallel ──
+  const [espnData, sportsDBData, tvData, tvTonight] = await Promise.all([
+    sport ? fetchESPN(sport) : Promise.resolve(null),
+    fetchSportsDB(raw),
+    !sport ? fetchTVMaze(raw) : Promise.resolve(null),
+    !sport ? fetchTVTonight() : Promise.resolve(null),
+  ]);
 
-  const prompt = "Where to watch: \"" + raw + "\"\n"
-    + "Today is: " + ds + " at " + ts + "\n\n"
-    + "2026 US streaming rights (override your training data): " + rights + "\n\n"
-    + "Return ONLY valid JSON, no markdown:\n"
-    + '{"title":"full official event title","type":"sports|tv_show|movie|award_show|other","eventDate":"the actual date this event occurs e.g. May 30 2026 — NOT today unless it is actually today","primaryOption":{"service":"Paramount+","detail":"Paramount+ streaming app — stream live at paramountplus.com or the app","time":"Prelims 4:00 AM ET / Main Card 7:00 AM ET — give real scheduled times, not a guess","isLive":false,"isStreaming":true},"alternatives":[{"service":"CBS","detail":"CBS broadcast channel — available via cable, antenna, or live TV apps","time":"select bouts only"}],"affiliates":["Paramount+","Hulu + Live TV"],"note":"one helpful sentence","confidence":"high|medium|low"}\n\n'
-    + "CRITICAL RULES:\n"
-    + "1. eventDate = the actual real-world date of this event, NOT today's date unless the event is literally today.\n"
-    + "2. isLive = true ONLY if the event is happening RIGHT NOW at " + ts + " today. If it is days away, isLive must be false.\n"
-    + "3. detail field must be descriptive — never just say 'app' or 'channel'. Say exactly what app or channel and how to find it.\n"
-    + "4. time field must show real scheduled start times in ET. For events in other time zones convert to ET correctly.\n"
-    + "5. Use 2026 rights above — they override your training data.";
+  // ── Build real-data context block for the AI ──
+  const dataParts = [];
+  if (espnData)    dataParts.push('ESPN LIVE SCHEDULE:\n' + JSON.stringify(espnData, null, 1));
+  if (sportsDBData)dataParts.push('TheSportsDB EVENT SEARCH:\n' + JSON.stringify(sportsDBData, null, 1));
+  if (tvData)      dataParts.push('TVMaze SHOW DATA:\n' + JSON.stringify(tvData, null, 1));
+  if (tvTonight) {
+    // Only include shows whose name fuzzy-matches the query
+    const ql = raw.toLowerCase();
+    const relevant = tvTonight.filter(s => s.show && ql.split(' ').some(w => w.length > 3 && s.show.toLowerCase().includes(w)));
+    if (relevant.length) dataParts.push('TVMaze TONIGHT SCHEDULE (relevant matches):\n' + JSON.stringify(relevant, null, 1));
+  }
+
+  const hasRealData = dataParts.length > 0;
+  const dataBlock   = hasRealData
+    ? `REAL-TIME DATA FROM LIVE SCHEDULE APIs (accurate, use this over your training data):\n\n${dataParts.join('\n\n')}\n\n`
+    : `No live API data matched. Fallback — 2026 US streaming rights: ${RIGHTS_2026}\n\n`;
+
+  const prompt =
+    `User searching for: "${raw}"\nToday: ${ds} at ${ts}\n\n` +
+    dataBlock +
+    `Using the data above, return ONLY this JSON (no markdown):\n` +
+    `{"title":"full official title","type":"sports|tv_show|movie|award_show|other","eventDate":"actual date of the event e.g. May 30 2026","primaryOption":{"service":"Channel or Service Name","detail":"full descriptive name e.g. Paramount+ streaming app — paramountplus.com","time":"exact ET time e.g. 8:00 PM ET or Prelims 4AM ET / Main Card 7AM ET","isLive":false,"isStreaming":true},"alternatives":[{"service":"...","detail":"...","time":"..."}],"affiliates":["Service1","Service2"],"note":"one helpful sentence","confidence":"high|medium|low"}\n\n` +
+    `RULES:\n` +
+    `1. If real API data is provided above, the broadcasts/network fields are accurate — use them for the service name.\n` +
+    `2. eventDate = the actual date of this event, NOT today's date (${ds}) unless the event is literally happening today.\n` +
+    `3. isLive = true ONLY if the event status says "In Progress" or it is happening right now at ${ts}.\n` +
+    `4. detail must be descriptive — never write just "app" or "channel".\n` +
+    `5. confidence = "high" if real API data was found, "medium" if using training knowledge, "low" if uncertain.\n` +
+    (hasRealData ? '6. Real data was found — set confidence to "high".' : '6. No live data found — set confidence to "medium".');
 
   try {
-    const txt = await askAI(prompt);
+    const txt   = await askAI(prompt);
     const match = txt.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('no json');
-    renderResult(JSON.parse(match[0]), raw);
+    if (!match) throw new Error('no JSON in response');
+    const result = JSON.parse(match[0]);
+    renderResult(result, raw);
     addRecent(raw);
     bumpCounter();
   } catch(e) {
-    console.error(e);
-    const noKey = KEYS.gemini.includes('YOUR_') && KEYS.openrouter.includes('YOUR_') && KEYS.groq.includes('YOUR_');
-    rz.innerHTML=`<div class="err-card"><div style="font-size:1.7rem;margin-bottom:12px">🤔</div><p style="color:#FF6B35;font-weight:700;margin-bottom:8px">${noKey?'API keys not configured yet.':'Couldn\'t find that one.'}</p><p style="color:var(--muted);font-size:.87rem">${noKey?'Open index.html and fill in your free API keys (see README — takes 2 minutes each).<br/><br/><strong>Gemini:</strong> aistudio.google.com &nbsp;|&nbsp; <strong>OpenRouter:</strong> openrouter.ai &nbsp;|&nbsp; <strong>Groq:</strong> console.groq.com':'Try being more specific — e.g. <em>"Lakers vs Nuggets tonight"</em> or <em>"Survivor Season 47 episode"</em>.'}</p></div>`;
+    console.error('[SR] Search error:', e);
+    rz.innerHTML = `
+      <div class="err-card">
+        <div style="font-size:1.7rem;margin-bottom:12px">🤔</div>
+        <p style="color:#FF6B35;font-weight:700;margin-bottom:8px">Couldn't find that one.</p>
+        <p style="color:var(--muted);font-size:.87rem">
+          Try being more specific — e.g. <em>"Lakers vs Nuggets tonight"</em> or <em>"Survivor Season 47"</em>.
+        </p>
+      </div>`;
   }
-  inf.style.display='block';
+  inf.style.display = 'block';
 }
-
-function renderResult(r, q) {
-  const po=r.primaryOption||{};
-  const col=sc(po.service);
-  const confCls=r.confidence==='high'?'chi':'cmd';
-  const confLbl=r.confidence==='high'?'✓ CONFIRMED':'~ LIKELY — verify with your provider';
-  const now = r.eventDate || new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
-  const tei={sports:'🏆',tv_show:'📺',movie:'🎬',award_show:'🏅'}[r.type]||'📡';
-  const bc=po.isLive?'bl':po.isStreaming?'bs':'bt';
-  const bt=po.isLive?'🔴 LIVE NOW':po.isStreaming?'📺 STREAMING':'📡 TV CHANNEL';
-  const shareUrl=`${location.origin}${location.pathname}?q=${encodeURIComponent(q)}`;
-
-  const alts=r.alternatives?.length?`<div class="ralts"><p class="blbl">Also Available On</p><div class="achips">${r.alternatives.map(a=>`<div class="achip"><div class="ach-svc" style="color:${sc(a.service)}">${a.service}</div><div class="ach-det">${a.detail||''}</div>${a.time&&a.time!=='same'?`<div class="ach-time">${a.time}</div>`:''}</div>`).join('')}</div></div>`:'';
-
-  const affs=r.affiliates?.length?`<div class="raffs"><p class="blbl">Don't have a subscription? — Partner Offers</p><div class="affrow">${r.affiliates.map(sv=>{const c=sc(sv);const af=AFFS.find(a=>a.name.toLowerCase().includes(sv.toLowerCase().split(' ')[0]));return`<a href="${af?.href||'#'}" target="_blank" rel="noopener sponsored" class="affbtn" style="color:${c};border-color:${c}44;background:${c}18">${sv} — ${af?.price||'View Plans'} →</a>`;}).join('')}</div></div>`:'';
-
-  rz.innerHTML=`<div class="r-card"><div class="rh"><div class="rconf ${confCls}">${confLbl}</div><h2 class="rtitle">${tei} ${r.title||q}</h2><p class="rdate">${now}</p><button class="rshare" onclick="share(${JSON.stringify(shareUrl)},${JSON.stringify(r.title||q)})">🔗 Share this result</button></div><div class="rprim"><p class="blbl">Best Way to Watch</p><div class="pflex"><div class="sslab" style="background:${col}18;border-color:${col}44"><div class="sname" style="color:${col}">${po.service||'—'}</div><span class="tbadge ${bc}">${bt}</span></div><div class="pdet"><p class="pname">${po.detail||''}</p><p class="ptime">🕐 ${po.time||'Check local listings'}</p>${r.note?`<p class="pnote">💡 ${r.note}</p>`:''}</div></div></div>${alts}${affs}</div>`;
-}
-
-function share(url, title) {
-  if(navigator.share){navigator.share({title:`Where to watch ${title} — StreamRadar`,url});}
-  else{navigator.clipboard.writeText(url).then(()=>alert('Link copied!')).catch(()=>alert(`Copy this: ${url}`));}
-}
-
-/* ── URL PARAM: ?q=... (shareable links) ─────────────── */
-const urlQ=new URLSearchParams(location.search).get('q');
-if(urlQ){document.getElementById('si').value=urlQ;doSearch(urlQ);}
 
 /* ── WIRE ─────────────────────────────────────────────── */
 document.getElementById('sbtn').addEventListener('click',()=>doSearch());
@@ -732,6 +806,7 @@ document.getElementById('si').addEventListener('keydown',e=>{if(e.key==='Enter')
 
 /* ── BOOT ─────────────────────────────────────────────── */
 document.getElementById('yr').textContent=new Date().getFullYear();
+loadData();
 renderHot();
 renderAffs();
 renderRecent();
