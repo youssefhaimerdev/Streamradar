@@ -696,17 +696,23 @@ async function fetchTVTonight() {
 
 /* ── AI via /api/search (keys stay safe in Vercel env vars) ─ */
 async function askAI(prompt) {
-  const res = await fetch('/api/search', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ prompt }),
-  });
+  let res;
+  try {
+    res = await fetch('/api/search', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ prompt }),
+    });
+  } catch(networkErr) {
+    throw new Error('Network error — could not reach /api/search. Is the Vercel function deployed? ' + networkErr.message);
+  }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Server error ${res.status}`);
+    let errMsg = `Server error ${res.status}`;
+    try { const e = await res.json(); errMsg = e.error || errMsg; } catch {}
+    throw new Error(errMsg);
   }
   const data = await res.json();
-  if (!data.text) throw new Error('Empty response from server');
+  if (!data.text) throw new Error('API function returned empty response — check Vercel function logs');
   return data.text;
 }
 
@@ -788,12 +794,21 @@ async function doSearch(override) {
     bumpCounter();
   } catch(e) {
     console.error('[SR] Search error:', e);
+    const msg = e.message || 'Unknown error';
+    const isSetup = msg.toLowerCase().includes('key') || msg.includes('502') || msg.includes('401') || msg.includes('403');
     rz.innerHTML = `
       <div class="err-card">
         <div style="font-size:1.7rem;margin-bottom:12px">🤔</div>
-        <p style="color:#FF6B35;font-weight:700;margin-bottom:8px">Couldn't find that one.</p>
-        <p style="color:var(--muted);font-size:.87rem">
-          Try being more specific — e.g. <em>"Lakers vs Nuggets tonight"</em> or <em>"Survivor Season 47"</em>.
+        <p style="color:#FF6B35;font-weight:700;margin-bottom:8px">
+          ${isSetup ? 'Setup issue detected' : "Couldn't find that one."}
+        </p>
+        <p style="color:var(--muted);font-size:.87rem;margin-bottom:10px">
+          ${isSetup
+            ? 'Check that your API keys are saved in Vercel → Settings → Environment Variables, then redeploy.'
+            : 'Try being more specific — e.g. <em>"Lakers vs Nuggets tonight"</em> or <em>"Survivor Season 47"</em>.'}
+        </p>
+        <p style="color:rgba(255,255,255,.2);font-size:.72rem;font-family:monospace;background:rgba(0,0,0,.3);padding:8px 12px;border-radius:6px;word-break:break-all">
+          Debug: ${msg.replace(/</g,'&lt;')}
         </p>
       </div>`;
   }
