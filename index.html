@@ -772,17 +772,24 @@ async function doSearch(override) {
     : `No live API data matched. Fallback — 2026 US streaming rights: ${RIGHTS_2026}\n\n`;
 
   const prompt =
-    `User searching for: "${raw}"\nToday: ${ds} at ${ts}\n\n` +
+    `User is searching for: "${raw}"\n` +
+    `Today: ${ds} at ${ts}\n\n` +
     dataBlock +
-    `Using the data above, return ONLY this JSON (no markdown):\n` +
-    `{"title":"full official title","type":"sports|tv_show|movie|award_show|other","eventDate":"actual date of the event e.g. May 30 2026","primaryOption":{"service":"Channel or Service Name","detail":"full descriptive name e.g. Paramount+ streaming app — paramountplus.com","time":"exact ET time e.g. 8:00 PM ET or Prelims 4AM ET / Main Card 7AM ET","isLive":false,"isStreaming":true},"alternatives":[{"service":"...","detail":"...","time":"..."}],"affiliates":["Service1","Service2"],"note":"one helpful sentence","confidence":"high|medium|low"}\n\n` +
+    `CRITICAL INSTRUCTION: The user searched for "${raw}". ` +
+    `You MUST answer about THAT specific event — the exact fighters, teams, or show they named. ` +
+    `Do NOT return a different event just because it is more prominent or upcoming. ` +
+    `If the real API data above does not contain the specific event the user asked for, ` +
+    `use your own knowledge to answer — do not substitute a different event.\n\n` +
+    `Return ONLY this JSON (no markdown):\n` +
+    `{"title":"full official title of the SPECIFIC event the user asked about","type":"sports|tv_show|movie|award_show|other","eventDate":"actual date e.g. June 6 2026","primaryOption":{"service":"Channel or Service Name","detail":"full descriptive name e.g. Paramount+ streaming app — paramountplus.com","time":"exact ET time e.g. Prelims 4:00 PM ET / Main Card 7:00 PM ET","isLive":false,"isStreaming":true},"alternatives":[{"service":"...","detail":"...","time":"..."}],"affiliates":["Service1","Service2"],"note":"one helpful sentence","confidence":"high|medium|low"}\n\n` +
     `RULES:\n` +
-    `1. If real API data is provided above, the broadcasts/network fields are accurate — use them for the service name.\n` +
-    `2. eventDate = the actual date of this event, NOT today's date (${ds}) unless the event is literally happening today.\n` +
-    `3. isLive = true ONLY if the event status says "In Progress" or it is happening right now at ${ts}.\n` +
-    `4. detail must be descriptive — never write just "app" or "channel".\n` +
-    `5. confidence = "high" if real API data was found, "medium" if using training knowledge, "low" if uncertain.\n` +
-    (hasRealData ? '6. Real data was found — set confidence to "high".' : '6. No live data found — set confidence to "medium".');
+    `1. MATCH THE QUERY: answer about "${raw}" specifically — not a different event.\n` +
+    `2. If real API data has the event, use broadcasts/network from it — they are accurate.\n` +
+    `3. eventDate = actual date of THIS specific event, NOT today (${ds}).\n` +
+    `4. isLive = true ONLY if status is "In Progress" right now at ${ts}.\n` +
+    `5. detail must be descriptive — never just "app" or "channel".\n` +
+    `6. For UFC events in 2026: ALL are on Paramount+. No ESPN+. No PPV.\n` +
+    (hasRealData ? '7. Real API data found — set confidence "high" if it matches the query.' : '7. No live data — use training knowledge, set confidence "medium".');
 
   try {
     const txt   = await askAI(prompt);
