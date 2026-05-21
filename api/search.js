@@ -35,20 +35,24 @@ export default async function handler(req, res) {
       name: 'Gemini',
       key:  process.env.GEMINI_API_KEY,
       call: async (key) => {
+        // Use Gemini with Google Search grounding — searches the web in real time
         const r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
           {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({
-              contents:         [{ parts: [{ text: prompt }] }],
+              contents: [{ parts: [{ text: prompt }] }],
+              tools:    [{ google_search: {} }],
               generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
             }),
           }
         );
         if (!r.ok) throw new Error(`Gemini ${r.status}`);
         const d = await r.json();
-        return d.candidates[0].content.parts[0].text;
+        // Extract text from response (may include search results context)
+        const parts = d.candidates?.[0]?.content?.parts || [];
+        return parts.map(p => p.text || '').join('');
       },
     },
     {
