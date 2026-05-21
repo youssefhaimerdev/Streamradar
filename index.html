@@ -815,6 +815,133 @@ async function doSearch(override) {
   inf.style.display = 'block';
 }
 
+/* ── RENDER FUNCTIONS ────────────────────────────────────── */
+
+function renderResult(r, q) {
+  const po  = r.primaryOption || {};
+  const col = sc(po.service);
+  const confCls = r.confidence === 'high' ? 'chi' : 'cmd';
+  const confLbl = r.confidence === 'high' ? '✓ CONFIRMED' : '~ LIKELY — verify with your provider';
+  const dateDisplay = r.eventDate || new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+  const tei = {sports:'🏆',tv_show:'📺',movie:'🎬',award_show:'🏅'}[r.type] || '📡';
+  const bc  = po.isLive ? 'bl' : po.isStreaming ? 'bs' : 'bt';
+  const bt  = po.isLive ? '🔴 LIVE NOW' : po.isStreaming ? '📺 STREAMING' : '📡 TV CHANNEL';
+  const shareUrl = location.origin + location.pathname + '?q=' + encodeURIComponent(q);
+
+  const alts = r.alternatives?.length ? `
+    <div class="ralts">
+      <p class="blbl">Also Available On</p>
+      <div class="achips">
+        ${r.alternatives.map(a => `
+          <div class="achip">
+            <div class="ach-svc" style="color:${sc(a.service)}">${a.service}</div>
+            <div class="ach-det">${a.detail || ''}</div>
+            ${a.time && a.time !== 'same' ? `<div class="ach-time">${a.time}</div>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>` : '';
+
+  const affs = r.affiliates?.length ? `
+    <div class="raffs">
+      <p class="blbl">Don't have a subscription? — Partner Offers</p>
+      <div class="affrow">
+        ${r.affiliates.map(sv => {
+          const c  = sc(sv);
+          const af = AFFS.find(a => a.name.toLowerCase().includes(sv.toLowerCase().split(' ')[0]));
+          return `<a href="${af?.href || '#'}" target="_blank" rel="noopener sponsored" class="affbtn"
+            style="color:${c};border-color:${c}44;background:${c}18">
+            ${sv} — ${af?.price || 'View Plans'} →
+          </a>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  rz.innerHTML = `
+    <div class="r-card">
+      <div class="rh">
+        <div class="rconf ${confCls}">${confLbl}</div>
+        <h2 class="rtitle">${tei} ${r.title || q}</h2>
+        <p class="rdate">${dateDisplay}</p>
+        <button class="rshare" onclick="share(${JSON.stringify(shareUrl)},${JSON.stringify(r.title || q)})">🔗 Share this result</button>
+      </div>
+      <div class="rprim">
+        <p class="blbl">Best Way to Watch</p>
+        <div class="pflex">
+          <div class="sslab" style="background:${col}18;border-color:${col}44">
+            <div class="sname" style="color:${col}">${po.service || '—'}</div>
+            <span class="tbadge ${bc}">${bt}</span>
+          </div>
+          <div class="pdet">
+            <p class="pname">${po.detail || ''}</p>
+            <p class="ptime">🕐 ${po.time || 'Check local listings'}</p>
+            ${r.note ? `<p class="pnote">💡 ${r.note}</p>` : ''}
+          </div>
+        </div>
+      </div>
+      ${alts}
+      ${affs}
+    </div>`;
+}
+
+function share(url, title) {
+  if (navigator.share) {
+    navigator.share({ title: `Where to watch ${title} — StreamRadar`, url });
+  } else {
+    navigator.clipboard.writeText(url)
+      .then(() => alert('Link copied!'))
+      .catch(() => alert('Copy this link: ' + url));
+  }
+}
+
+function renderHot() {
+  document.getElementById('hgrid').innerHTML = HOT.map(h => `
+    <div class="hcard" style="border-top-color:${h.color}"
+      onclick="qs(${JSON.stringify(h.name)})"
+      onmouseenter="this.style.boxShadow='0 14px 40px ${h.color}28'"
+      onmouseleave="this.style.boxShadow='none'">
+      <div class="hcard-top">
+        <span class="hemoji">${h.emoji}</span>
+        <span class="hbadge" style="background:${h.color}28;color:${h.color}">${h.badge}</span>
+      </div>
+      <div class="hname">${h.name}</div>
+      <div class="hsub">${h.sub}</div>
+      <div class="hfoot">
+        <span class="hsvc" style="color:${sc(h.svc) || h.color}">${h.svc}</span>
+        <span class="htime">${h.time}</span>
+      </div>
+    </div>`).join('');
+}
+
+function renderAffs() {
+  document.getElementById('aff-grid').innerHTML = AFFS.map(a => `
+    <a class="ac" href="${a.href}" target="_blank" rel="noopener sponsored"
+      style="border-top-color:${a.color}"
+      onmouseenter="this.style.boxShadow='0 16px 50px ${a.color}28'"
+      onmouseleave="this.style.boxShadow='none'">
+      <div class="ach2">
+        <span class="aei">${a.icon}</span>
+        ${a.badge ? `<span class="abadge" style="background:${a.color}28;color:${a.color}">${a.badge}</span>` : ''}
+      </div>
+      <div class="an" style="color:${a.color}">${a.name}</div>
+      <div class="at2">${a.tag}</div>
+      <p class="ad2">${a.desc}</p>
+      <div class="af2">
+        <span class="apr">${a.price}</span>
+        <span class="acta" style="color:${a.color}">Try Free →</span>
+      </div>
+    </a>`).join('');
+}
+
+function renderRecent() {
+  const r  = getRecent();
+  const el = document.getElementById('recent');
+  if (!r.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  document.getElementById('rchips').innerHTML = r.map(q =>
+    `<button class="rcpill" onclick="qs(${JSON.stringify(q)})">🕐 ${q}</button>`
+  ).join('');
+}
+
 /* ── WIRE ─────────────────────────────────────────────── */
 document.getElementById('sbtn').addEventListener('click',()=>doSearch());
 document.getElementById('si').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
