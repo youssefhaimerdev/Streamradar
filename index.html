@@ -942,6 +942,52 @@ function renderRecent() {
   ).join('');
 }
 
+/* ── UTILITY FUNCTIONS ───────────────────────────────────── */
+
+// Clock
+function tick() {
+  const n = new Date();
+  const t = n.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+  const d = n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  document.getElementById('clock').textContent = `LIVE · ${d} · ${t}`;
+}
+setInterval(tick, 1000); tick();
+
+// Search counter (session-based, realistic feel)
+function initCounter() {
+  const base = parseInt(sessionStorage.getItem('sr_b') || '0') || 8200 + Math.floor(Math.random() * 900);
+  sessionStorage.setItem('sr_b', base);
+  const mins = new Date().getHours() * 60 + new Date().getMinutes();
+  document.getElementById('ctr').textContent = (base + Math.floor(mins * 2.6)).toLocaleString();
+}
+function bumpCounter() {
+  const el = document.getElementById('ctr');
+  el.textContent = (parseInt(el.textContent.replace(/,/g,'')) + 1).toLocaleString();
+}
+
+// Recent searches (localStorage)
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem('sr_r') || '[]'); } catch { return []; }
+}
+function addRecent(q) {
+  try {
+    let r = getRecent().filter(x => x.toLowerCase() !== q.toLowerCase());
+    r.unshift(q);
+    r = r.slice(0, 6);
+    localStorage.setItem('sr_r', JSON.stringify(r));
+    renderRecent();
+  } catch {}
+}
+
+// data.json loader (curated events, optional)
+let EVENTS_DATA = [];
+async function loadData() {
+  try {
+    const r = await fetch('/data.json?v=' + Date.now());
+    if (r.ok) { const d = await r.json(); EVENTS_DATA = d.events || []; }
+  } catch { console.log('[SR] data.json not loaded'); }
+}
+
 /* ── WIRE ─────────────────────────────────────────────── */
 document.getElementById('sbtn').addEventListener('click',()=>doSearch());
 document.getElementById('si').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
